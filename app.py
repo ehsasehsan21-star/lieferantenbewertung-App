@@ -229,7 +229,10 @@ with tab_overview:
     st.markdown("## Gesamtübersicht Lieferantenperformance")
 
     # ── Score cards per supplier ─────────────────────────────────────────────
-    cols = st.columns(len(selected_suppliers))
+    if not selected_suppliers:
+    st.warning("Bitte mindestens einen Lieferanten auswählen.")
+    st.stop()
+cols = st.columns(len(selected_suppliers))
     for col, supplier in zip(cols, selected_suppliers):
         df_s = df[df["Lieferant"] == supplier]
         info = score_supplier(df_s)
