@@ -93,36 +93,11 @@ st.markdown("""
 @st.cache_data(show_spinner="Daten werden geladen …")
 def load_data(uploaded_file=None) -> pd.DataFrame:
     if uploaded_file is not None:
-        uploaded_file.seek(0)  # reset file pointer before reading
         ext = uploaded_file.name.split(".")[-1].lower()
         if ext == "csv":
-            df = pd.read_csv(uploaded_file)
+            df = pd.read_csv(uploaded_file, parse_dates=["Datum"])
         else:
-            df = pd.read_excel(uploaded_file)
-
-        # Remove accidental whitespace from column names
-        df.columns = df.columns.str.strip()
-
-        # Auto-map English column names to German
-        df = df.rename(columns={
-            "Order_Date":  "Datum",
-            "Supplier":    "Lieferant",
-            "order_date":  "Datum",
-            "supplier":    "Lieferant",
-            "Date":        "Datum",
-            "date":        "Datum",
-        })
-
-        # Safely parse date column
-        if "Datum" in df.columns:
-            df["Datum"] = pd.to_datetime(df["Datum"], errors="coerce")
-        else:
-            st.error(f"Spalte 'Datum' nicht gefunden. Vorhandene Spalten: {list(df.columns)}")
-            st.stop()
-
-        if "Lieferant" not in df.columns:
-            st.error(f"Spalte 'Lieferant' nicht gefunden. Vorhandene Spalten: {list(df.columns)}")
-            st.stop()
+            df = pd.read_excel(uploaded_file, parse_dates=["Datum"])
     else:
         df = generate_supplier_data(months=24, inject_anomalies=True)
 
@@ -143,8 +118,6 @@ with st.sidebar:
         help="CSV oder Excel mit Spalten: Datum, Lieferant, KPI-Spalten",
     )
 
-    if uploaded is not None:
-        uploaded.seek(0)  # reset before passing to cached function
     df_all = load_data(uploaded)
 
     st.markdown('<p class="section-title">Filter</p>', unsafe_allow_html=True)
@@ -158,13 +131,11 @@ with st.sidebar:
 
     min_date = df_all["Datum"].min().date()
     max_date = df_all["Datum"].max().date()
-    extended_min = min_date.replace(year=2022)
-    extended_max = max_date.replace(year=2027)
     date_range = st.date_input(
         "Zeitraum",
         value=(min_date, max_date),
-        min_value=extended_min,
-        max_value=extended_max,
+        min_value=min_date,
+        max_value=max_date,
     )
 
     st.markdown('<p class="section-title">Anomalie-Methode</p>', unsafe_allow_html=True)
@@ -229,10 +200,7 @@ with tab_overview:
     st.markdown("## Gesamtübersicht Lieferantenperformance")
 
     # ── Score cards per supplier ─────────────────────────────────────────────
-    if not selected_suppliers:
-    st.warning("Bitte mindestens einen Lieferanten auswählen.")
-    st.stop()
-cols = st.columns(len(selected_suppliers))
+    cols = st.columns(len(selected_suppliers))
     for col, supplier in zip(cols, selected_suppliers):
         df_s = df[df["Lieferant"] == supplier]
         info = score_supplier(df_s)
