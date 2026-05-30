@@ -94,21 +94,9 @@ def load_data(uploaded_file=None) -> pd.DataFrame:
     if uploaded_file is not None:
         ext = uploaded_file.name.split(".")[-1].lower()
         if ext == "csv":
-           if uploaded_file.name.endswith(".csv"):
-    df = pd.read_csv(uploaded_file)
-else:
-    df = pd.read_excel(uploaded_file)
-
-# Clean column names
-df.columns = df.columns.str.strip()
-
-# Handle date column safely
-if "Datum" in df.columns:
-    df["Datum"] = pd.to_datetime(df["Datum"], errors="coerce")
-else:
-    import streamlit as st
-    st.warning("⚠️ No 'Datum' column found in uploaded file")
-
+            df = pd.read_csv(uploaded_file, parse_dates=["Datum"])
+        else:
+            df = pd.read_excel(uploaded_file, parse_dates=["Datum"])
     else:
         df = generate_supplier_data(months=24, inject_anomalies=True)
 
