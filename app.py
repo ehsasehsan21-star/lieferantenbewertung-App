@@ -1,3 +1,4 @@
+
 """
 Lieferantenbewertung – KPI Dashboard mit Anomalieerkennung
 ==========================================================
@@ -102,11 +103,25 @@ def load_data(uploaded_file=None) -> pd.DataFrame:
         # Remove accidental whitespace from column names
         df.columns = df.columns.str.strip()
 
+        # Auto-map English column names to German
+        df = df.rename(columns={
+            "Order_Date":  "Datum",
+            "Supplier":    "Lieferant",
+            "order_date":  "Datum",
+            "supplier":    "Lieferant",
+            "Date":        "Datum",
+            "date":        "Datum",
+        })
+
         # Safely parse date column
         if "Datum" in df.columns:
             df["Datum"] = pd.to_datetime(df["Datum"], errors="coerce")
         else:
             st.error(f"Spalte 'Datum' nicht gefunden. Vorhandene Spalten: {list(df.columns)}")
+            st.stop()
+
+        if "Lieferant" not in df.columns:
+            st.error(f"Spalte 'Lieferant' nicht gefunden. Vorhandene Spalten: {list(df.columns)}")
             st.stop()
     else:
         df = generate_supplier_data(months=24, inject_anomalies=True)
@@ -143,11 +158,13 @@ with st.sidebar:
 
     min_date = df_all["Datum"].min().date()
     max_date = df_all["Datum"].max().date()
+    extended_min = min_date.replace(year=2022)
+    extended_max = max_date.replace(year=2027)
     date_range = st.date_input(
         "Zeitraum",
         value=(min_date, max_date),
-        min_value=min_date,
-        max_value=max_date,
+        min_value=extended_min,
+        max_value=extended_max,
     )
 
     st.markdown('<p class="section-title">Anomalie-Methode</p>', unsafe_allow_html=True)
